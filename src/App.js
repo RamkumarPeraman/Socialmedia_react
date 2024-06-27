@@ -25,75 +25,63 @@ function App() {
   const [editTitle,setEditTitle] = useState('');
   const navigate = useNavigate(false);
   const width = useWindowSize();
-  const {datas,isLoading,fetchError} =useAxiosFetchData('http://localhost:3500/posts')
+  // const {datas,isLoading,fetchError} =useAxiosFetchData('http://localhost:3500/posts')
 
-
-  useEffect(()=>{
-    setPosts(datas);
-  },[datas])
-
-
-  // useEffect(()=>{
-  //   const fetchPosts =  async () =>{
-  //     try{
-  //     const response = await api.get('/posts');
-  //     setPosts(response.data);
-  //     }catch(e){
-  //       console.error(e)
-  //     }
-  //   }
-  //   fetchPosts();
-  // },[])
 
   useEffect(() => {
-    const filteredResults = posts.filter(post => post.body.toLowerCase().includes(search.toLowerCase()) ||
-      post.title.toLowerCase().includes(search.toLowerCase()));
-    setSearchResults(filteredResults);
+    try {
+      const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
+      console.log('Stored Posts (on mount):', storedPosts);
+      setPosts(storedPosts);
+    } catch (error) {
+      console.error('Error retrieving data from local storage:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const filteredResults = posts.filter(
+      (post) =>
+        post.body.toLowerCase().includes(search.toLowerCase()) ||
+        post.title.toLowerCase().includes(search.toLowerCase())
+    );
+    setSearchResults(filteredResults.reverse());
   }, [posts, search]);
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newId = posts.length ? String(Number(posts[posts.length - 1].id) + 1) : '1';
+    const dateTime = format(new Date(), 'MMMM dd, yyyy pp');
 
-  const handleSubmit = async(e) => {
-        e.preventDefault()
-        const id1 = (posts.length) ? posts.length + 1 : 1;
-        const id = String(id1);
-        const datetime = format(new Date(), 'MMMM dd, yyyy pp');
-        const newpost = {id,title:postTitle,datetime,body:postBody}
-        try{
-            const response = await api.post('/posts',newpost);
-            setPosts([...posts,response.data]);
-            setPostTitle('');
-            setPostBody('');
-            navigate("/");
-        }
-        catch(err){
-          console.log(err.message);
-        }
-}
-const handleDelete = async (id) => {
-    try {
-      await api.delete(`posts/${id}`)
-      const deleteList = posts.filter(post => post.id !== id);
-      setPosts(deleteList);
-      navigate('/');
-    } catch (e) {
-        console.error(e); 
-    }
-}
-const handleEdit = async (id) => {
-  const datetime = format(new Date(), 'MMMM dd, yyyy pp');
-  const updatedpost = {id,title:editTitle,datetime,body:editBody}
-  try{
-      const response = await api.put(`/posts/${id}`,updatedpost);
-      setPosts(posts.map(post => post.id === id ?{...response.data} : post));
-      setEditTitle('');
-      setEditBody('');
-      navigate("/");
-
-  }catch(err){
-    console.log(err);
-  }
-  console.log('Edit'); 
-}
+    const newPost = { id: newId, title: postTitle, date: dateTime, body: postBody };
+    setPosts((prevPosts) => [...prevPosts, newPost]);
+    setPostTitle('');
+    setPostBody('');
+    console.log('New Post added:', newPost);
+    navigate('/');
+    // Update local storage after adding the new post
+    localStorage.setItem('posts', JSON.stringify([...posts, newPost]));
+  };
+  const handleDelete = (id) => {
+    const updatedPosts = posts.filter((post) => post.id !== id);
+    setPosts(updatedPosts);
+    console.log('Post deleted (ID:', id, '):', updatedPosts);
+    navigate('/');
+    // Update local storage after deleting a post
+    localStorage.setItem('posts', JSON.stringify(updatedPosts));
+  };
+  const handleEdit = (id) => {
+    const editTime = format(new Date(), 'MMMM dd, yyyy pp');
+    const updatedPosts = posts.map((post) =>
+      post.id === id ? { ...post, title: editTitle, date: editTime, body: editBody } : post
+    );
+    setPosts(updatedPosts);
+    setEditTitle('');
+    setEditBody('');
+    console.log('Post edited (ID:', id, '):', updatedPosts);
+    navigate('/');
+    // Update local storage after editing a post
+    localStorage.setItem('posts', JSON.stringify(updatedPosts));
+  };
   return (
     <div className="App">
       <Header 
@@ -108,8 +96,6 @@ const handleEdit = async (id) => {
 
           <Route path='/' element={  <Home 
             posts={searchResults}
-            isLoading={isLoading}
-            fetchError={fetchError}
             />} />
 
             <Route path='post'>
