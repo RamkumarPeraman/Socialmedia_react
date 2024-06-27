@@ -60,7 +60,7 @@ function App() {
         const newpost = {id,title:postTitle,datetime,body:postBody}
         try{
             const response = await api.post('/posts',newpost);
-            setPosts([...pozsts,response.data]);
+            setPosts([...posts,response.data]);
             setPostTitle('');
             setPostBody('');
             navigate("/");
